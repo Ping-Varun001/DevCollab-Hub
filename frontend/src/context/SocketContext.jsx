@@ -10,7 +10,8 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         if (user) {
-            const newSocket = io('http://localhost:5000');
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://devcollab-backend-ggdi.onrender.com';
+            const newSocket = io(backendUrl);
             setSocket(newSocket);
 
             return () => newSocket.close();
