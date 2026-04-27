@@ -1,0 +1,38 @@
+# Node modules (both frontend + backend)
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment files (VERY IMPORTANT)
+.env
+server/.env
+client/.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build folders
+client/build/
+dist/
+
+# Optional (if using Vite)
+client/.vite/
+
+# Coverage (testing)
+coverage/
+
+# IDE files
+.vscode/
+.idea/
+
+# Misc
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
