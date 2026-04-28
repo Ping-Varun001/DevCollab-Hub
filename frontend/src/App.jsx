@@ -14,6 +14,7 @@ import CreateProject from './pages/CreateProject';
 import Profile from './pages/Profile';
 import Applications from './pages/Applications';
 import ChatPage from './pages/ChatPage';
+import ManageProject from './pages/ManageProject';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="/projects" element={<ProjectList />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/create-project" element={<CreateProject />} />
+            <Route path="/projects/:id/manage" element={<ManageProject />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/applications" element={<Applications />} />
             <Route path="/chat/:projectId" element={<ChatPage />} />

@@ -4,6 +4,7 @@ import axios from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import GlassCard from '../components/GlassCard';
 import CustomButton from '../components/CustomButton';
+import { CheckCircle, Circle, Plus, Trash2, Edit } from 'lucide-react';
 
 const ProjectDetail = () => {
     const { id } = useParams();
@@ -12,6 +13,10 @@ const ProjectDetail = () => {
     const [loading, setLoading] = useState(true);
     const [applying, setApplying] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    
+    // Task state
+    const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [taskAdding, setTaskAdding] = useState(false);
 
     useEffect(() => {
         const fetchProject = async () => {
@@ -44,12 +49,56 @@ const ProjectDetail = () => {
         }
     };
 
+    const handleAddTask = async (e) => {
+        e.preventDefault();
+        if (!newTaskTitle.trim()) return;
+        setTaskAdding(true);
+        try {
+            const res = await axios.post(`/projects/${id}/tasks`, { title: newTaskTitle, status: 'Todo' });
+            setProject(prev => ({
+                ...prev,
+                tasks: [...(prev.tasks || []), res.data]
+            }));
+            setNewTaskTitle('');
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to add task.' });
+        } finally {
+            setTaskAdding(false);
+        }
+    };
+
+    const handleUpdateTaskStatus = async (taskId, newStatus) => {
+        try {
+            const res = await axios.put(`/projects/${id}/tasks/${taskId}`, { status: newStatus });
+            setProject(prev => ({
+                ...prev,
+                tasks: prev.tasks.map(t => t._id === taskId ? res.data : t)
+            }));
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to update task.' });
+        }
+    };
+
+    const handleDeleteTask = async (taskId) => {
+        if (!window.confirm('Delete this task?')) return;
+        try {
+            await axios.delete(`/projects/${id}/tasks/${taskId}`);
+            setProject(prev => ({
+                ...prev,
+                tasks: prev.tasks.filter(t => t._id !== taskId)
+            }));
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to delete task.' });
+        }
+    };
+
     if (loading) return <div className="text-center mt-20">Loading...</div>;
     if (!project) return <div className="text-center mt-20 text-red-400">Project not found</div>;
 
     const currentUserId = user ? (user._id || user.id) : null;
     const isMember = currentUserId && project.members.some(m => m._id === currentUserId || m === currentUserId);
     const isCreator = currentUserId && (project.createdBy._id === currentUserId || project.createdBy === currentUserId);
+    const tasks = project.tasks || [];
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-8">
@@ -107,6 +156,60 @@ const ProjectDetail = () => {
                                 ))}
                             </div>
                         </section>
+
+                        {isMember && (
+                            <section>
+                                <h2 className="text-xl font-bold text-white mb-4 border-b border-[rgba(255,255,255,0.1)] pb-2">Project Tasks</h2>
+                                <form onSubmit={handleAddTask} className="flex gap-2 mb-4">
+                                    <input 
+                                        type="text" 
+                                        value={newTaskTitle}
+                                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                                        placeholder="Add a new task..."
+                                        className="flex-grow bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 text-white focus:outline-none focus:border-[var(--color-brand-accent)]"
+                                    />
+                                    <CustomButton type="submit" variant="outline" disabled={taskAdding}>
+                                        <Plus size={20} />
+                                    </CustomButton>
+                                </form>
+                                <div className="space-y-2">
+                                    {tasks.length === 0 ? (
+                                        <p className="text-gray-500 text-sm italic">No tasks yet.</p>
+                                    ) : (
+                                        tasks.map(task => (
+                                            <div key={task._id} className="flex items-center justify-between bg-[rgba(255,255,255,0.05)] p-3 rounded">
+                                                <div className="flex items-center gap-3">
+                                                    <button 
+                                                        onClick={() => handleUpdateTaskStatus(task._id, task.status === 'Done' ? 'Todo' : 'Done')}
+                                                        className="text-[var(--color-brand-accent)]"
+                                                    >
+                                                        {task.status === 'Done' ? <CheckCircle size={20} /> : <Circle size={20} />}
+                                                    </button>
+                                                    <span className={`text-white ${task.status === 'Done' ? 'line-through text-gray-500' : ''}`}>
+                                                        {task.title}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-xs px-2 py-1 rounded ${
+                                                        task.status === 'Done' ? 'bg-green-500 bg-opacity-20 text-green-300' : 
+                                                        task.status === 'InProgress' ? 'bg-blue-500 bg-opacity-20 text-blue-300' : 
+                                                        'bg-gray-500 bg-opacity-20 text-gray-300'
+                                                    }`}>
+                                                        {task.status}
+                                                    </span>
+                                                    <button 
+                                                        onClick={() => handleDeleteTask(task._id)}
+                                                        className="text-red-400 hover:text-red-300 transition-colors p-1"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </section>
+                        )}
                     </div>
 
                     <div className="space-y-6">
@@ -137,8 +240,13 @@ const ProjectDetail = () => {
                         </GlassCard>
 
                         {isCreator && (
-                            <div className="text-center">
-                                <Link to={`/applications?project=${project._id}`}>
+                            <div className="space-y-3">
+                                <Link to={`/projects/${project._id}/manage`} className="block">
+                                    <CustomButton variant="outline" className="w-full flex items-center justify-center gap-2">
+                                        <Edit size={16} /> Manage Project
+                                    </CustomButton>
+                                </Link>
+                                <Link to={`/applications?project=${project._id}`} className="block">
                                     <CustomButton variant="outline" className="w-full">
                                         Manage Applications
                                     </CustomButton>
